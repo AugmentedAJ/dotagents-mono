@@ -590,6 +590,24 @@ function getContextRefEntry(sessionId: string | undefined, contextRef: string): 
   return contextRefRegistryBySession.get(sessionId)?.get(contextRef)
 }
 
+function buildExpandedContextFields(content: string, start: number, end: number, totalChars: number): Record<string, unknown> {
+  const boundedStart = Math.max(0, Math.min(start, totalChars))
+  const boundedEnd = Math.max(boundedStart, Math.min(end, totalChars))
+  const returnedChars = boundedEnd - boundedStart
+  const truncated = boundedStart > 0 || boundedEnd < totalChars
+
+  return {
+    start: boundedStart,
+    end: boundedEnd,
+    returnedChars,
+    truncated,
+    expandedContextLabel: `Expanded context (${boundedStart}-${boundedEnd} of ${totalChars} chars)`,
+    expandedContext: content.slice(boundedStart, boundedEnd),
+    ...(boundedEnd < totalChars ? { nextOffset: boundedEnd } : {}),
+    ...(boundedStart > 0 ? { previousOffset: Math.max(0, boundedStart - returnedChars) } : {}),
+  }
+}
+
 function buildArchivedMessagesContent(messages: LLMMessage[], label: string = "Archived"): string {
   return messages
     .map((message, idx) => `[${label} ${idx + 1} | role=${message.role}]\n${message.content || ""}`)
@@ -661,6 +679,7 @@ export function readMoreContext(
   const totalChars = entry.totalChars
 
   if (mode === "overview") {
+    const end = Math.min(maxChars, totalChars)
     return {
       success: true,
       contextRef,
@@ -671,17 +690,19 @@ export function readMoreContext(
       messageCount: entry.messageCount,
       totalChars,
       preview: entry.preview,
+      ...buildExpandedContextFields(entry.content, 0, end, totalChars),
     }
   }
 
   if (mode === "head") {
+    const end = Math.min(maxChars, totalChars)
     return {
       success: true,
       contextRef,
       mode,
       totalChars,
-      returnedChars: Math.min(maxChars, totalChars),
-      excerpt: entry.content.slice(0, maxChars),
+      ...buildExpandedContextFields(entry.content, 0, end, totalChars),
+      excerpt: entry.content.slice(0, end),
     }
   }
 
@@ -692,8 +713,7 @@ export function readMoreContext(
       contextRef,
       mode,
       totalChars,
-      start,
-      returnedChars: totalChars - start,
+      ...buildExpandedContextFields(entry.content, start, totalChars, totalChars),
       excerpt: entry.content.slice(start),
     }
   }
@@ -708,9 +728,7 @@ export function readMoreContext(
       contextRef,
       mode,
       totalChars,
-      start,
-      end,
-      returnedChars: end - start,
+      ...buildExpandedContextFields(entry.content, start, end, totalChars),
       excerpt: entry.content.slice(start, end),
     }
   }
@@ -728,7 +746,7 @@ export function readMoreContext(
 
     const haystack = entry.content.toLowerCase()
     const needle = query.toLowerCase()
-    const matches: Array<{ start: number; end: number; excerpt: string }> = []
+    const matches: Array<{ start: number; end: number; returnedChars: number; expandedContextLabel: string; expandedContext: string; excerpt: string }> = []
     let cursor = 0
     while (cursor < haystack.length && matches.length < 5) {
       const foundAt = haystack.indexOf(needle, cursor)
@@ -754,6 +772,9 @@ export function readMoreContext(
       matches.push({
         start,
         end,
+        returnedChars: end - start,
+        expandedContextLabel: `Expanded context match (${start}-${end} of ${totalChars} chars)`,
+        expandedContext: entry.content.slice(start, end),
         excerpt: entry.content.slice(start, end),
       })
       cursor = foundAt + needle.length

@@ -736,10 +736,39 @@ describe('registerContextRef export for MCP tool summarization', () => {
       kind: 'truncated_tool',
       toolName: 'exa:web_search_advanced_exa',
       totalChars: original.length,
+      returnedChars: original.length,
+      truncated: false,
+      expandedContextLabel: expect.stringContaining('Expanded context'),
+      expandedContext: original,
     }))
 
     const search = readMoreContext('session-mcp-ref', ref!, { mode: 'search', query: 'END' })
     expect(search).toEqual(expect.objectContaining({ success: true, matchCount: 1 }))
+    const firstMatch = (search.matches as Array<{ expandedContext: string }>)[0]
+    expect(firstMatch.expandedContext).toContain('END')
+  })
+
+  it('returns a useful expanded context slice in the default overview mode', () => {
+    const original = `START hidden default overview content ${'m'.repeat(2000)} END`
+    const ref = registerContextRef('session-mcp-ref', {
+      kind: 'truncated_tool',
+      role: 'tool',
+      content: original,
+    })
+
+    const overview = readMoreContext('session-mcp-ref', ref!)
+
+    expect(overview).toEqual(expect.objectContaining({
+      success: true,
+      contextRef: ref,
+      mode: 'overview',
+      returnedChars: 1500,
+      truncated: true,
+      nextOffset: 1500,
+      expandedContextLabel: expect.stringContaining('Expanded context'),
+    }))
+    expect(String(overview.expandedContext)).toContain('START hidden default overview content')
+    expect(String(overview.expandedContext)).not.toContain(' END')
   })
 
   it('returns undefined when sessionId is missing', () => {

@@ -149,7 +149,7 @@ export const runtimeToolDefinitions: RuntimeToolDefinition[] = [
   },
   {
     name: "read_more_context",
-    description: "Read a specific slice of earlier compacted context using a Context ref shown in truncated or summarized messages. Prefer overview/search/window reads over fetching large heads or tails.",
+    description: "Read actual text from earlier compacted context using a Context ref shown in truncated or summarized messages. Overview returns a labeled expanded excerpt; use search/window for targeted recovery from large refs.",
     inputSchema: {
       type: "object",
       properties: {
@@ -159,7 +159,7 @@ export const runtimeToolDefinitions: RuntimeToolDefinition[] = [
         },
         mode: {
           type: "string",
-          description: "Read mode: overview, head, tail, window, or search.",
+          description: "Read mode: overview, head, tail, window, or search. Overview includes an expandedContext excerpt by default.",
           enum: ["overview", "head", "tail", "window", "search"],
         },
         offset: {

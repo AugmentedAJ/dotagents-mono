@@ -150,7 +150,7 @@ function getAgentModeAdditions(availableTools: PromptTool[]): string {
   if (hasReadMoreContext) {
     sections.push(`COMPACTED CONTEXT:
 - If a prior message says it was truncated or summarized and shows a "Context ref: ctx_...", use read_more_context to inspect the original source
-- Prefer read_more_context(mode: "overview") first, then search/window reads for the exact detail you need
+- Prefer read_more_context(mode: "overview") first; it returns an expandedContext excerpt plus offsets for additional search/window reads
 - Avoid pulling large heads/tails unless a narrower search or window is insufficient`)
   }
 
