@@ -34,6 +34,9 @@ type MarkdownImageSource = {
 };
 
 const CONVERSATION_IMAGE_ASSET_REGEX = /^assets:\/\/conversation-image\/([^/]+)\/([^/?#]+)(?:[?#].*)?$/i;
+// Match the desktop renderer's allowlist: raster image data URLs only,
+// excluding SVG so attacker-controlled markdown can't inject scripted SVG payloads.
+const ALLOWED_MARKDOWN_DATA_IMAGE_URL_REGEX = /^data:image\/(?:png|apng|gif|jpe?g|webp|bmp|avif)(?:;|,)/i;
 const MARKDOWN_IMAGE_COPY = {
   fallbackLabel: 'Image',
   unavailableLabel: 'Image unavailable.',
@@ -69,7 +72,7 @@ function isAllowedMarkdownImageUrl(rawUrl?: string): boolean {
   if (!rawUrl) return false;
   const url = rawUrl.trim();
   if (parseConversationImageAssetUrl(url)) return true;
-  if (url.startsWith('data:image/')) return true;
+  if (ALLOWED_MARKDOWN_DATA_IMAGE_URL_REGEX.test(url)) return true;
 
   try {
     const parsed = new URL(url);
